@@ -23,19 +23,20 @@ jobs:
       - name: Install and configure YC CLI
         run: |
           curl -sSL https://storage.yandexcloud.net/yandexcloud-yc/install.sh | bash
-          export PATH="$HOME/yandex-cloud/bin:$PATH"
+          echo "$HOME/yandex-cloud/bin" >> $GITHUB_PATH
           echo '${{ secrets.YC_SA_KEY_JSON }}' > key.json
           yc config set service-account-key key.json
 
       - name: Get IAM token
         id: get_token
         run: |
-          export PATH="$HOME/yandex-cloud/bin:$PATH"
           IAM_TOKEN=$(yc iam create-token)
           echo "::add-mask::$IAM_TOKEN"
           echo "IAM_TOKEN=$IAM_TOKEN" >> $GITHUB_ENV
 
       - name: Login to Yandex Container Registry
+        env:
+          IAM_TOKEN: ${{ env.IAM_TOKEN }}
         run: |
           echo "${IAM_TOKEN}" | docker login --username iam --password-stdin cr.yandex
 
@@ -43,13 +44,13 @@ jobs:
         id: vars
         run: |
           if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
-            TAG=${GITHUB_REF#refs/tags/}
+            TAG="${GITHUB_REF#refs/tags/}"
             IMAGE_TAG="${TAG}"
           else
-            SHORT_SHA=$(echo $GITHUB_SHA | cut -c1-7)
+            SHORT_SHA="$(echo $GITHUB_SHA | cut -c1-7)"
             IMAGE_TAG="sha-${SHORT_SHA}"
           fi
-          echo "image_tag=$IMAGE_TAG" >> $GITHUB_OUTPUT
+          echo "image_tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
