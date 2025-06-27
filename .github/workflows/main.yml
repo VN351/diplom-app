@@ -24,7 +24,8 @@ jobs:
         run: |
           curl -sSL https://storage.yandexcloud.net/yandexcloud-yc/install.sh | bash
           echo "${{ secrets.YC_SA_KEY_JSON }}" > key.json
-          ./yc config set service-account-key key.json
+          export PATH="$HOME/yandex-cloud/bin:$PATH"
+          yc config set service-account-key key.json
 
       - name: Get IAM token
         id: get_token
