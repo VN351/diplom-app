@@ -23,14 +23,15 @@ jobs:
       - name: Install and configure YC CLI
         run: |
           curl -sSL https://storage.yandexcloud.net/yandexcloud-yc/install.sh | bash
-          echo "${{ secrets.YC_SA_KEY_JSON }}" > key.json
           export PATH="$HOME/yandex-cloud/bin:$PATH"
+          echo '${{ secrets.YC_SA_KEY_JSON }}' > key.json
           yc config set service-account-key key.json
 
       - name: Get IAM token
         id: get_token
         run: |
-          IAM_TOKEN=$(./yc iam create-token)
+          export PATH="$HOME/yandex-cloud/bin:$PATH"
+          IAM_TOKEN=$(yc iam create-token)
           echo "::add-mask::$IAM_TOKEN"
           echo "IAM_TOKEN=$IAM_TOKEN" >> $GITHUB_ENV
 
@@ -57,6 +58,7 @@ jobs:
           context: .
           push: true
           tags: ${{ env.IMAGE_NAME }}:${{ steps.vars.outputs.image_tag }}
+
 
   #deploy:
   #  needs: build-and-push
