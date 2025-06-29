@@ -2,8 +2,8 @@ name: Build and Push Docker Image
 
 on:
   push:
-    branches:
-      - master
+    tags:
+      - 'v*'
 
 env:
   IMAGE_NAME: cr.yandex/${{ secrets.YC_REGISTRY }}/myapp
