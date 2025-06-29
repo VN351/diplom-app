@@ -87,15 +87,23 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Set up kubectl
+      - name: Set up kubeconfig
         run: |
-          echo "${{ secrets.KUBE_CONFIG_DATA }}" | base64 --decode > kubeconfig
-          export KUBECONFIG=$PWD/kubeconfig
+          echo "${{ secrets.KUBE_CONFIG_DATA }}" | base64 --decode > $HOME/.kube/config
+      # делаем файл kubeconfig на стандартном месте
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'latest'
 
       - name: Update deployment manifest image tag
+        env:
+          IMAGE_NAME: ${{ env.IMAGE_NAME }}
+          GITHUB_REF: ${{ github.ref }}
         run: |
           TAG=${GITHUB_REF#refs/tags/}
-          sed -i "s|image: .*$|image: ${{ env.IMAGE_NAME }}:$TAG|" k8s/deployment.yml
+          sed -i "s|image: .*$|image: $IMAGE_NAME:$TAG|" k8s/deployment.yml
 
       - name: Deploy to Kubernetes
         run: |
@@ -105,11 +113,11 @@ jobs:
         run: |
           kubectl rollout status deployment/<deployment-name> --timeout=120s
 
-      # Необязательно, но удобно: проверить сервис после деплоя (например, curl)
       - name: Smoke test application endpoint
         run: |
           sleep 10
           curl --fail http://<your-service-endpoint>/ || exit 1
+
 
 
 
