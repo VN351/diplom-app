@@ -24,6 +24,29 @@
         border-radius: 8px;
         background: #eee;
       }
+      .links {
+        margin-top: 30px;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        align-items: center;
+      }
+      .link-btn {
+        display: inline-block;
+        padding: 12px 28px;
+        background-color: #4f8cff;
+        color: #fff;
+        border-radius: 6px;
+        text-decoration: none;
+        font-size: 1rem;
+        font-weight: bold;
+        box-shadow: 0 2px 6px rgba(79,140,255,0.08);
+        transition: background 0.2s, transform 0.15s;
+      }
+      .link-btn:hover {
+        background-color: #2563eb;
+        transform: translateY(-2px) scale(1.03);
+      }
     </style>
   </head>
   <body>
@@ -32,9 +55,11 @@
       <img src="images/rick1.png" alt="Rick">
       <p>Diplom project DevOps </p>
       <p>Nevzorov V.V. SHDEVOPS-13 First push</p>
-      <a href="https://github.com/VN351/diplom-terraform.git">Repository Terraform</a>
-      <a href="https://github.com/VN351/diplom-app.git">Repository App & Kubernetes App</a>
-      <a href="https://github.com/VN351/diplom-terraform.git">Repository Kubernetes</a>
+      <div class="links">
+        <a class="link-btn" href="https://github.com/VN351/diplom-terraform.git" target="_blank">Repository Terraform</a>
+        <a class="link-btn" href="https://github.com/VN351/diplom-app.git" target="_blank">Repository App & Kubernetes App</a>
+        <a class="link-btn" href="https://github.com/VN351/diplom-terraform.git" target="_blank">Repository Kubernetes</a>
+      </div>
     </div>
   </body>
 </html>
