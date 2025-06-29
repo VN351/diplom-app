@@ -59,25 +59,57 @@ jobs:
           tags: ${{ env.IMAGE_NAME }}:${{ steps.vars.outputs.image_tag }}
 
 
-  #deploy:
-  #  needs: build-and-push
-  #  if: startsWith(github.ref, 'refs/tags/')
-  #  runs-on: ubuntu-latest
-  #  steps:
-  #    - name: Checkout code
-  #      uses: actions/checkout@v3
+#  deploy:
+#    needs: build-and-push
+#    if: startsWith(github.ref, 'refs/tags/')
+#    runs-on: ubuntu-latest
+#    steps:
+#      - name: Checkout code
+#        uses: actions/checkout@v3
+#      - name: Set up kubectl
+#        run: |
+#          echo "${{ secrets.KUBE_CONFIG_DATA }}" | base64 --decode > kubeconfig
+#          export KUBECONFIG=$PWD/kubeconfig
 
-  #    - name: Set up kubectl
-  #      run: |
-  #        echo "${{ secrets.KUBE_CONFIG_DATA }}" | base64 --decode > kubeconfig
-  #        export KUBECONFIG=$PWD/kubeconfig
+#      - name: Update deployment manifest image tag
+#        run: |
+#          TAG=${GITHUB_REF#refs/tags/}
+#          sed -i "s|image: .*$|image: ${{ env.IMAGE_NAME }}:$TAG|" k8s/deployment.yaml
 
-  #    - name: Update deployment manifest image tag
-  #      run: |
-  #        TAG=${GITHUB_REF#refs/tags/}
-  #        sed -i "s|image: .*$|image: ${{ env.IMAGE_NAME }}:$TAG|" k8s/deployment.yaml
+#      - name: Deploy to Kubernetes
+#        run: |
+#          kubectl apply -f k8s/deployment.yaml
+  deploy:
+    needs: build-and-push
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
 
-  #    - name: Deploy to Kubernetes
-  #      run: |
-  #        kubectl apply -f k8s/deployment.yaml
+      - name: Set up kubectl
+        run: |
+          echo "${{ secrets.KUBE_CONFIG_DATA }}" | base64 --decode > kubeconfig
+          export KUBECONFIG=$PWD/kubeconfig
+
+      - name: Update deployment manifest image tag
+        run: |
+          TAG=${GITHUB_REF#refs/tags/}
+          sed -i "s|image: .*$|image: ${{ env.IMAGE_NAME }}:$TAG|" k8s/deployment.yaml
+
+      - name: Deploy to Kubernetes
+        run: |
+          kubectl apply -f k8s/deployment.yaml
+
+      - name: Wait for rollout to finish
+        run: |
+          kubectl rollout status deployment/<deployment-name> --timeout=120s
+
+      # Необязательно, но удобно: проверить сервис после деплоя (например, curl)
+      - name: Smoke test application endpoint
+        run: |
+          sleep 10
+          curl --fail http://<your-service-endpoint>/ || exit 1
+
+
 
