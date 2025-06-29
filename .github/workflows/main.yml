@@ -89,8 +89,8 @@ jobs:
 
       - name: Set up kubeconfig
         run: |
+          mkdir -p $HOME/.kube
           echo "${{ secrets.KUBE_CONFIG_DATA }}" | base64 --decode > $HOME/.kube/config
-      # делаем файл kubeconfig на стандартном месте
 
       - name: Set up kubectl
         uses: azure/setup-kubectl@v3
