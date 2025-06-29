@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
         - name: nginx-diplom
-          image: cr.yandex/crpis58ctmk00n8ugg5u/app:0.4
+          image: cr.yandex/crpd8u3gqoeus8fnvplv/myapp:0.4
           ports:
             - containerPort: 80
       imagePullSecrets:
