@@ -1,4 +1,4 @@
-name: CD Pipeline
+name: Deploy to Kubernetes
 
 on:
   push:
@@ -6,6 +6,7 @@ on:
       - 'v*'
 
 env:
+  IMAGE_NAME: cr.yandex/${{ secrets.YC_REGISTRY }}/myapp
   DEPLOYMENT_NAME: nginx-diplom
   SERVICE_ENDPOINT: app.labadata.ru
 
