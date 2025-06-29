@@ -1,4 +1,4 @@
-name: CI/CD Pipeline
+name: CI Pipeline
 
 on:
   push:
@@ -9,8 +9,6 @@ on:
 
 env:
   IMAGE_NAME: cr.yandex/${{ secrets.YC_REGISTRY }}/myapp
-  DEPLOYMENT_NAME: nginx-diplom
-  SERVICE_ENDPOINT: app.labadata.ru
 
 jobs:
   build-and-push:
@@ -59,44 +57,3 @@ jobs:
           context: .
           push: true
           tags: ${{ env.IMAGE_NAME }}:${{ steps.vars.outputs.image_tag }}
-
-  deploy:
-    needs: build-and-push
-    if: startsWith(github.ref, 'refs/tags/')
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Set up kubeconfig
-        run: |
-          mkdir -p $HOME/.kube
-          echo "${{ secrets.KUBE_CONFIG_DATA }}" | base64 --decode > $HOME/.kube/config
-
-      - name: Set up kubectl
-        uses: azure/setup-kubectl@v3
-        with:
-          version: 'latest'
-
-      - name: Update deployment manifest image tag
-        env:
-          IMAGE_NAME: ${{ env.IMAGE_NAME }}
-          GITHUB_REF: ${{ github.ref }}
-        run: |
-          TAG=${GITHUB_REF#refs/tags/}
-          sed -i "s|image: .*$|image: $IMAGE_NAME:$TAG|" k8s/deployment.yml
-
-      - name: Deploy to Kubernetes
-        run: |
-          kubectl apply -f k8s/deployment.yml
-
-      - name: Wait for rollout to finish
-        run: kubectl rollout status deployment/nginx-diplom --timeout=120s
-
-      - name: Smoke test application endpoint
-        run: |
-          sleep 10
-          curl --fail http://${{ env.SERVICE_ENDPOINT }}/ || exit 1
-
-
-
