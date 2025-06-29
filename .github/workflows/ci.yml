@@ -4,12 +4,15 @@ on:
   push:
     branches:
       - master
+    tags:
+      - 'v*'
 
 env:
   IMAGE_NAME: cr.yandex/${{ secrets.YC_REGISTRY }}/myapp
 
 jobs:
   build-and-push:
+    if: github.ref_type == 'branch' || github.ref_type == 'tag'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
