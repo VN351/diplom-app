@@ -1,0 +1,97 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+env:
+  IMAGE_NAME: cr.yandex/${{ secrets.YC_REGISTRY }}/myapp
+  DEPLOYMENT_NAME: nginx-diplom
+  SERVICE_ENDPOINT: app.labadata.ru
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Install and configure YC CLI
+        run: |
+          curl -sSL https://storage.yandexcloud.net/yandexcloud-yc/install.sh | bash
+          export PATH="$HOME/yandex-cloud/bin:$PATH"
+          echo '${{ secrets.YC_SA_KEY_JSON }}' > key.json
+          yc config set service-account-key key.json
+
+      - name: Get IAM token
+        id: get_token
+        run: |
+          export PATH="$HOME/yandex-cloud/bin:$PATH"
+          IAM_TOKEN=$(yc iam create-token)
+          echo "::add-mask::$IAM_TOKEN"
+          echo "IAM_TOKEN=$IAM_TOKEN" >> $GITHUB_ENV
+      
+      - name: Login to Yandex Container Registry
+        run: |
+          echo "${IAM_TOKEN}" | docker login --username iam --password-stdin cr.yandex
+
+      - name: Extract tag or commit SHA
+        id: vars
+        run: |
+          if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
+            TAG="${GITHUB_REF#refs/tags/}"
+            IMAGE_TAG="${TAG}"
+          else
+            SHORT_SHA="$(echo $GITHUB_SHA | cut -c1-7)"
+            IMAGE_TAG="sha-${SHORT_SHA}"
+          fi
+          echo "image_tag=${IMAGE_TAG}" >> $GITHUB_OUTPUT
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ env.IMAGE_NAME }}:${{ steps.vars.outputs.image_tag }}
+
+  deploy:
+    needs: build-and-push
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up kubeconfig
+        run: |
+          mkdir -p $HOME/.kube
+          echo "${{ secrets.KUBE_CONFIG_DATA }}" | base64 --decode > $HOME/.kube/config
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'latest'
+
+      - name: Update deployment manifest image tag
+        env:
+          IMAGE_NAME: ${{ env.IMAGE_NAME }}
+          GITHUB_REF: ${{ github.ref }}
+        run: |
+          TAG=${GITHUB_REF#refs/tags/}
+          sed -i "s|image: .*$|image: $IMAGE_NAME:$TAG|" k8s/deployment.yml
+
+      - name: Deploy to Kubernetes
+        run: |
+          kubectl apply -f k8s/deployment.yml
+
+      - name: Wait for rollout to finish
+        run: kubectl rollout status deployment/nginx-diplom --timeout=120s
+
+      - name: Smoke test application endpoint
+        run: |
+          sleep 10
+          curl --fail http://${{ env.SERVICE_ENDPOINT }}/ || exit 1
